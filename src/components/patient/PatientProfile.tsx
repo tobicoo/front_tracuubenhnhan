@@ -1,719 +1,1335 @@
-import { useState, useEffect } from 'react';
-import { User as UserIcon, Mail, Phone, Calendar, MapPin, Droplet, AlertCircle, Save, Plus, Edit, Trash2, X, Heart, Lock, Key } from 'lucide-react';
-import { User } from '../../App';
+"use client"
+
+import type React from "react"
+import { useState, useEffect } from "react"
+import {
+  UserIcon,
+  Mail,
+  Phone,
+  Calendar,
+  MapPin,
+  Save,
+  Plus,
+  Edit,
+  Trash2,
+  Heart,
+  Lock,
+  Key,
+  Activity,
+  Pill,
+  Scissors,
+  Eye,
+  EyeOff,
+  Shield,
+  Sparkles,
+  CheckCircle2,
+  XCircle,
+  Award as IdCard,
+  Users,
+} from "lucide-react"
+
+export interface User {
+  id: string
+  password: string
+  profile: {
+    patientId: string
+    name: string
+    phone: string
+    cccd: string
+    dateOfBirth: string
+    gender: string
+    email: string
+    emergencyContact: string
+    address: string
+  }
+}
 
 interface PatientProfileProps {
-  user: User;
+  user: User
 }
 
 interface MedicalCondition {
-  id: string;
-  patientId: string;
-  condition: string;
-  type: 'disease' | 'allergy' | 'surgery';
-  diagnosedDate: string;
-  severity: 'mild' | 'moderate' | 'severe';
-  status: 'active' | 'resolved';
-  notes: string;
+  id: string
+  patientId: string
+  condition: string
+  type: "disease" | "allergy" | "surgery"
+  diagnosedDate: string
+  severity: "mild" | "moderate" | "severe"
+  status: "active" | "resolved"
+  notes: string
 }
 
-export default function PatientProfile({ user }: PatientProfileProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState(user.profile);
-  const [success, setSuccess] = useState('');
-  
-  // Medical history states
-  const [conditions, setConditions] = useState<MedicalCondition[]>([]);
-  const [isAddingCondition, setIsAddingCondition] = useState(false);
-  const [editingConditionId, setEditingConditionId] = useState<string | null>(null);
-  const [conditionFormData, setConditionFormData] = useState<Partial<MedicalCondition>>({
-    condition: '',
-    type: 'disease',
-    diagnosedDate: '',
-    severity: 'mild',
-    status: 'active',
-    notes: ''
-  });
+type TabType = "personal" | "medical" | "password"
 
-  // Password change states
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+export default function PatientProfile({ user }: PatientProfileProps) {
+  const [activeTab, setActiveTab] = useState<TabType>("personal")
+  const [isEditing, setIsEditing] = useState(false)
+  const [formData, setFormData] = useState(user.profile)
+  const [success, setSuccess] = useState("")
+
+  const [conditions, setConditions] = useState<MedicalCondition[]>([])
+  const [isAddingCondition, setIsAddingCondition] = useState(false)
+  const [editingConditionId, setEditingConditionId] = useState<string | null>(null)
+  const [conditionFormData, setConditionFormData] = useState<Partial<MedicalCondition>>({
+    condition: "",
+    type: "disease",
+    diagnosedDate: "",
+    severity: "mild",
+    status: "active",
+    notes: "",
+  })
+
   const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
+
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  })
+
+  const [hoveredTab, setHoveredTab] = useState<string | null>(null)
 
   useEffect(() => {
-    loadConditions();
-  }, [user.id]);
+    loadConditions()
+  }, [user.id])
 
   const loadConditions = () => {
-    const historyData = localStorage.getItem('medicalHistory');
+    const historyData = localStorage.getItem("medicalHistory")
     if (historyData) {
-      const allHistory: MedicalCondition[] = JSON.parse(historyData);
-      setConditions(allHistory.filter(h => h.patientId === user.id));
+      const allHistory: MedicalCondition[] = JSON.parse(historyData)
+      setConditions(allHistory.filter((h) => h.patientId === user.id))
+    } else {
+      setConditions([])
     }
-  };
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
+      [e.target.name]: e.target.value,
+    })
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Update user in localStorage
-    const usersData = localStorage.getItem('users');
-    if (usersData) {
-      const users: User[] = JSON.parse(usersData);
-      const userIndex = users.findIndex(u => u.id === user.id);
-      if (userIndex !== -1) {
-        users[userIndex].profile = formData;
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        // Update current user
-        const currentUser = { ...user, profile: formData };
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        
-        setSuccess('Cập nhật thông tin thành công!');
-        setIsEditing(false);
-        setTimeout(() => setSuccess(''), 3000);
-      }
+    e.preventDefault()
+
+    if (!formData.name.trim()) {
+      setSuccess("Lỗi: Họ và tên không được để trống!")
+      return
     }
-  };
 
-  // Medical history functions
+    const phoneRegex = /^[0-9]{10,11}$/
+    if (!phoneRegex.test(formData.phone)) {
+      setSuccess("Lỗi: Số điện thoại không hợp lệ!")
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (formData.email && !emailRegex.test(formData.email)) {
+      setSuccess("Lỗi: Định dạng Email không đúng!")
+      return
+    }
+
+    const usersData = localStorage.getItem("users")
+    if (usersData) {
+      const users: User[] = JSON.parse(usersData)
+      const userIndex = users.findIndex((u) => u.id === user.id)
+      if (userIndex !== -1) {
+        users[userIndex].profile = formData
+        localStorage.setItem("users", JSON.stringify(users))
+        const currentUser = { ...user, profile: formData }
+        localStorage.setItem("currentUser", JSON.stringify(currentUser))
+        setSuccess("Cập nhật thành công!")
+        setIsEditing(false)
+        setTimeout(() => setSuccess(""), 3000)
+      }
+    } else {
+      setSuccess("Cập nhật thành công!")
+      setIsEditing(false)
+      setTimeout(() => setSuccess(""), 3000)
+    }
+  }
+
   const handleAddCondition = () => {
+    if (!conditionFormData.condition?.trim()) {
+      setSuccess("Lỗi: Vui lòng nhập tên bệnh lý!")
+      setTimeout(() => setSuccess(""), 3000)
+      return
+    }
+
     const newCondition: MedicalCondition = {
-      id: `cond_${Date.now()}`,
+      id: "cond_" + Date.now().toString(),
       patientId: user.id,
-      condition: conditionFormData.condition || '',
-      type: conditionFormData.type || 'disease',
-      diagnosedDate: conditionFormData.diagnosedDate || '',
-      severity: conditionFormData.severity || 'mild',
-      status: conditionFormData.status || 'active',
-      notes: conditionFormData.notes || ''
-    };
+      condition: conditionFormData.condition || "",
+      type: conditionFormData.type || "disease",
+      diagnosedDate: conditionFormData.diagnosedDate || "",
+      severity: conditionFormData.severity || "mild",
+      status: conditionFormData.status || "active",
+      notes: conditionFormData.notes || "",
+    }
 
-    const historyData = localStorage.getItem('medicalHistory');
-    const allHistory: MedicalCondition[] = historyData ? JSON.parse(historyData) : [];
-    allHistory.push(newCondition);
-    localStorage.setItem('medicalHistory', JSON.stringify(allHistory));
+    const historyData = localStorage.getItem("medicalHistory")
+    const allHistory: MedicalCondition[] = historyData ? JSON.parse(historyData) : []
+    allHistory.push(newCondition)
+    localStorage.setItem("medicalHistory", JSON.stringify(allHistory))
 
-    loadConditions();
-    resetConditionForm();
-    setSuccess('Thêm tiền sử bệnh lý thành công!');
-    setTimeout(() => setSuccess(''), 3000);
-  };
+    loadConditions()
+    resetConditionForm()
+    setSuccess("Thêm tiền sử bệnh lý thành công!")
+    setTimeout(() => setSuccess(""), 3000)
+  }
 
   const handleEditCondition = (id: string) => {
-    const condition = conditions.find(c => c.id === id);
+    const condition = conditions.find((c) => c.id === id)
     if (condition) {
-      setConditionFormData(condition);
-      setEditingConditionId(id);
+      setConditionFormData(condition)
+      setEditingConditionId(id)
     }
-  };
+  }
 
   const handleUpdateCondition = () => {
-    const historyData = localStorage.getItem('medicalHistory');
+    const historyData = localStorage.getItem("medicalHistory")
     if (historyData) {
-      const allHistory: MedicalCondition[] = JSON.parse(historyData);
-      const index = allHistory.findIndex(h => h.id === editingConditionId);
+      const allHistory: MedicalCondition[] = JSON.parse(historyData)
+      const index = allHistory.findIndex((h) => h.id === editingConditionId)
       if (index !== -1) {
-        allHistory[index] = { ...allHistory[index], ...conditionFormData };
-        localStorage.setItem('medicalHistory', JSON.stringify(allHistory));
-        loadConditions();
+        allHistory[index] = { ...allHistory[index], ...conditionFormData }
+        localStorage.setItem("medicalHistory", JSON.stringify(allHistory))
+        loadConditions()
       }
     }
-    resetConditionForm();
-    setSuccess('Cập nhật tiền sử bệnh lý thành công!');
-    setTimeout(() => setSuccess(''), 3000);
-  };
+    resetConditionForm()
+    setSuccess("Cập nhật tiền sử bệnh lý thành công!")
+    setTimeout(() => setSuccess(""), 3000)
+  }
 
   const handleDeleteCondition = (id: string) => {
-    if (confirm('Bạn có chắc chắn muốn xóa tiền sử bệnh lý này?')) {
-      const historyData = localStorage.getItem('medicalHistory');
+    if (confirm("Bạn có chắc chắn muốn xóa tiền sử bệnh lý này?")) {
+      const historyData = localStorage.getItem("medicalHistory")
       if (historyData) {
-        const allHistory: MedicalCondition[] = JSON.parse(historyData);
-        const filtered = allHistory.filter(h => h.id !== id);
-        localStorage.setItem('medicalHistory', JSON.stringify(filtered));
-        loadConditions();
-        setSuccess('Xóa tiền sử bệnh lý thành công!');
-        setTimeout(() => setSuccess(''), 3000);
+        const allHistory: MedicalCondition[] = JSON.parse(historyData)
+        const filtered = allHistory.filter((h) => h.id !== id)
+        localStorage.setItem("medicalHistory", JSON.stringify(filtered))
       }
+      loadConditions()
+      setSuccess("Xóa tiền sử bệnh lý thành công!")
+      setTimeout(() => setSuccess(""), 3000)
     }
-  };
+  }
 
   const resetConditionForm = () => {
     setConditionFormData({
-      condition: '',
-      type: 'disease',
-      diagnosedDate: '',
-      severity: 'mild',
-      status: 'active',
-      notes: ''
-    });
-    setIsAddingCondition(false);
-    setEditingConditionId(null);
-  };
+      condition: "",
+      type: "disease",
+      diagnosedDate: "",
+      severity: "mild",
+      status: "active",
+      notes: "",
+    })
+    setIsAddingCondition(false)
+    setEditingConditionId(null)
+  }
 
-  // Password change functions
   const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const usersData = localStorage.getItem('users');
+    e.preventDefault()
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setSuccess("Mật khẩu xác nhận không khớp!")
+      setTimeout(() => setSuccess(""), 3000)
+      return
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setSuccess("Mật khẩu mới phải có ít nhất 6 ký tự!")
+      setTimeout(() => setSuccess(""), 3000)
+      return
+    }
+
+    const usersData = localStorage.getItem("users")
     if (usersData) {
-      const users: User[] = JSON.parse(usersData);
-      const currentUserData = users.find(u => u.id === user.id);
-      
+      const users: User[] = JSON.parse(usersData)
+      const currentUserData = users.find((u) => u.id === user.id)
+
       if (!currentUserData) {
-        setSuccess('Lỗi: Không tìm thấy người dùng!');
-        setTimeout(() => setSuccess(''), 3000);
-        return;
+        setSuccess("Lỗi: Không tìm thấy người dùng!")
+        setTimeout(() => setSuccess(""), 3000)
+        return
       }
 
       if (currentUserData.password !== passwordData.currentPassword) {
-        setSuccess('Mật khẩu hiện tại không đúng!');
-        setTimeout(() => setSuccess(''), 3000);
-        return;
+        setSuccess("Mật khẩu hiện tại không đúng!")
+        setTimeout(() => setSuccess(""), 3000)
+        return
       }
 
-      if (passwordData.newPassword !== passwordData.confirmPassword) {
-        setSuccess('Mật khẩu xác nhận không khớp!');
-        setTimeout(() => setSuccess(''), 3000);
-        return;
-      }
-
-      if (passwordData.newPassword.length < 6) {
-        setSuccess('Mật khẩu mới phải có ít nhất 6 ký tự!');
-        setTimeout(() => setSuccess(''), 3000);
-        return;
-      }
-
-      // Update password
-      const userIndex = users.findIndex(u => u.id === user.id);
+      const userIndex = users.findIndex((u) => u.id === user.id)
       if (userIndex !== -1) {
-        users[userIndex].password = passwordData.newPassword;
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        // Update current user
-        const updatedUser = { ...user, password: passwordData.newPassword };
-        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-        
-        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        setShowPasswordForm(false);
-        setSuccess('Đổi mật khẩu thành công!');
-        setTimeout(() => setSuccess(''), 3000);
+        users[userIndex].password = passwordData.newPassword
+        localStorage.setItem("users", JSON.stringify(users))
+        const updatedUser = { ...user, password: passwordData.newPassword }
+        localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
+        setSuccess("Đổi mật khẩu thành công!")
+        setTimeout(() => setSuccess(""), 3000)
       }
+    } else {
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
+      setSuccess("Đổi mật khẩu thành công!")
+      setTimeout(() => setSuccess(""), 3000)
     }
-  };
+  }
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'disease': return 'Bệnh nền';
-      case 'allergy': return 'Dị ứng';
-      case 'surgery': return 'Phẫu thuật';
-      default: return type;
+      case "disease":
+        return "Bệnh nền"
+      case "allergy":
+        return "Dị ứng"
+      case "surgery":
+        return "Phẫu thuật"
+      default:
+        return type
     }
-  };
+  }
 
   const getSeverityLabel = (severity: string) => {
     switch (severity) {
-      case 'mild': return 'Nhẹ';
-      case 'moderate': return 'Trung bình';
-      case 'severe': return 'Nặng';
-      default: return severity;
+      case "mild":
+        return "Nhẹ"
+      case "moderate":
+        return "Trung bình"
+      case "severe":
+        return "Nặng"
+      default:
+        return severity
     }
-  };
+  }
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityStyle = (severity: string): React.CSSProperties => {
     switch (severity) {
-      case 'mild': return 'bg-green-100 text-green-700';
-      case 'moderate': return 'bg-yellow-100 text-yellow-700';
-      case 'severe': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case "mild":
+        return { backgroundColor: "#d1fae5", color: "#047857" }
+      case "moderate":
+        return { backgroundColor: "#fef3c7", color: "#b45309" }
+      case "severe":
+        return { backgroundColor: "#fee2e2", color: "#dc2626" }
+      default:
+        return { backgroundColor: "#f3f4f6", color: "#374151" }
     }
-  };
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "disease":
+        return <Activity size={22} />
+      case "allergy":
+        return <Pill size={22} />
+      case "surgery":
+        return <Scissors size={22} />
+      default:
+        return <Heart size={22} />
+    }
+  }
+
+  const getTypeGradient = (type: string): string => {
+    switch (type) {
+      case "disease":
+        return "linear-gradient(135deg, #f43f5e 0%, #ec4899 100%)"
+      case "allergy":
+        return "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)"
+      case "surgery":
+        return "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)"
+      default:
+        return "linear-gradient(135deg, #6b7280 0%, #475569 100%)"
+    }
+  }
+
+  const tabs = [
+    {
+      id: "personal" as TabType,
+      label: "Thông tin cá nhân",
+      icon: UserIcon,
+      gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+    },
+    {
+      id: "medical" as TabType,
+      label: "Tiền sử bệnh lý",
+      icon: Heart,
+      gradient: "linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)",
+    },
+    {
+      id: "password" as TabType,
+      label: "Đổi mật khẩu",
+      icon: Lock,
+      gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    },
+  ]
+
+  const containerStyle: React.CSSProperties = {
+    maxWidth: "1000px",
+    margin: "0 auto",
+    padding: "32px 20px",
+    fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
+    minHeight: "100vh",
+    background: "linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%)",
+  }
+
+  const headerStyle: React.CSSProperties = {
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
+    borderRadius: "24px",
+    padding: "32px",
+    marginBottom: "24px",
+    color: "#ffffff",
+    position: "relative",
+    overflow: "hidden",
+    boxShadow: "0 20px 40px rgba(102, 126, 234, 0.3)",
+  }
+
+  const headerPatternStyle: React.CSSProperties = {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: "300px",
+    height: "100%",
+    background: "radial-gradient(circle at 80% 20%, rgba(255,255,255,0.15) 0%, transparent 50%)",
+    pointerEvents: "none",
+  }
+
+  const avatarStyle: React.CSSProperties = {
+    width: "90px",
+    height: "90px",
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+    border: "4px solid rgba(255,255,255,0.8)",
+  }
+
+  const tabContainerStyle: React.CSSProperties = {
+    display: "flex",
+    gap: "12px",
+    marginBottom: "24px",
+    padding: "8px",
+    backgroundColor: "#ffffff",
+    borderRadius: "20px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+  }
+
+  const getTabStyle = (tabId: string, gradient: string): React.CSSProperties => {
+    const isActive = activeTab === tabId
+    const isHovered = hoveredTab === tabId
+    return {
+      flex: 1,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "10px",
+      padding: "16px 20px",
+      fontSize: "14px",
+      fontWeight: 600,
+      cursor: "pointer",
+      border: "none",
+      borderRadius: "14px",
+      background: isActive ? gradient : isHovered ? "#f8fafc" : "transparent",
+      color: isActive ? "#ffffff" : "#64748b",
+      transition: "all 0.3s ease",
+      boxShadow: isActive ? "0 8px 20px rgba(0,0,0,0.15)" : "none",
+      transform: isActive ? "scale(1.02)" : "scale(1)",
+    }
+  }
+
+  const cardStyle: React.CSSProperties = {
+    backgroundColor: "#ffffff",
+    borderRadius: "24px",
+    boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+    padding: "32px",
+    marginBottom: "24px",
+    border: "1px solid #f1f5f9",
+  }
+
+  const cardHeaderStyle: React.CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "32px",
+    paddingBottom: "20px",
+    borderBottomWidth: "2px",
+    borderBottomStyle: "solid",
+    borderBottomColor: "#f1f5f9",
+  }
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: "26px",
+    fontWeight: 700,
+    background: "linear-gradient(135deg, #1e293b 0%, #475569 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    margin: 0,
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  }
+
+  const buttonStyle: React.CSSProperties = {
+    padding: "12px 24px",
+    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+    color: "#ffffff",
+    borderRadius: "14px",
+    border: "none",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontWeight: 600,
+    fontSize: "14px",
+    boxShadow: "0 8px 20px rgba(59, 130, 246, 0.35)",
+    transition: "all 0.3s ease",
+  }
+
+  const buttonSecondaryStyle: React.CSSProperties = {
+    padding: "12px 24px",
+    background: "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)",
+    color: "#475569",
+    borderRadius: "14px",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: "14px",
+    transition: "all 0.3s ease",
+  }
+
+  const buttonSuccessStyle: React.CSSProperties = {
+    padding: "12px 24px",
+    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    color: "#ffffff",
+    borderRadius: "14px",
+    border: "none",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontWeight: 600,
+    fontSize: "14px",
+    boxShadow: "0 8px 20px rgba(16, 185, 129, 0.35)",
+  }
+
+  const buttonDangerStyle: React.CSSProperties = {
+    padding: "10px 16px",
+    background: "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)",
+    color: "#dc2626",
+    borderRadius: "10px",
+    border: "none",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+  }
+
+  const formGridStyle: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "24px",
+  }
+
+  const labelStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#475569",
+    marginBottom: "10px",
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "14px 18px",
+    border: "2px solid #e2e8f0",
+    borderRadius: "14px",
+    fontSize: "15px",
+    outline: "none",
+    transition: "all 0.3s ease",
+    boxSizing: "border-box",
+    backgroundColor: "#ffffff",
+  }
+
+  const inputDisabledStyle: React.CSSProperties = {
+    backgroundColor: "#f8fafc",
+    color: "#64748b",
+    borderColor: "#f1f5f9",
+  }
+
+  const selectStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "14px 18px",
+    border: "2px solid #e2e8f0",
+    borderRadius: "14px",
+    fontSize: "15px",
+    outline: "none",
+    backgroundColor: "#ffffff",
+    cursor: "pointer",
+    boxSizing: "border-box",
+    appearance: "auto",
+    WebkitAppearance: "menulist",
+  }
+
+  const textareaStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "14px 18px",
+    border: "2px solid #e2e8f0",
+    borderRadius: "14px",
+    fontSize: "15px",
+    outline: "none",
+    resize: "vertical",
+    minHeight: "100px",
+    boxSizing: "border-box",
+    fontFamily: "inherit",
+  }
+
+  const alertStyle: React.CSSProperties = {
+    padding: "16px 20px",
+    borderRadius: "16px",
+    fontSize: "14px",
+    fontWeight: 600,
+    marginBottom: "24px",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  }
+
+  const alertSuccessStyle: React.CSSProperties = {
+    background: "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)",
+    color: "#047857",
+    border: "1px solid #a7f3d0",
+  }
+
+  const alertErrorStyle: React.CSSProperties = {
+    background: "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)",
+    color: "#dc2626",
+    border: "1px solid #fecaca",
+  }
+
+  const conditionCardStyle: React.CSSProperties = {
+    backgroundColor: "#ffffff",
+    borderRadius: "20px",
+    border: "1px solid #f1f5f9",
+    padding: "24px",
+    marginBottom: "16px",
+    transition: "all 0.3s ease",
+    boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+  }
+
+  const emptyStateStyle: React.CSSProperties = {
+    textAlign: "center",
+    padding: "60px 32px",
+    background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+    borderRadius: "20px",
+    border: "2px dashed #cbd5e1",
+  }
+
+  const passwordContainerStyle: React.CSSProperties = {
+    maxWidth: "480px",
+    margin: "0 auto",
+  }
+
+  const passwordHeaderStyle: React.CSSProperties = {
+    textAlign: "center",
+    marginBottom: "40px",
+  }
+
+  const passwordIconStyle: React.CSSProperties = {
+    width: "100px",
+    height: "100px",
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0 auto 20px",
+    boxShadow: "0 16px 32px rgba(16, 185, 129, 0.35)",
+  }
+
+  const securityNoteStyle: React.CSSProperties = {
+    background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)",
+    borderRadius: "16px",
+    padding: "20px",
+    marginTop: "32px",
+    border: "1px solid #93c5fd",
+  }
+
+  const inputWrapperStyle: React.CSSProperties = {
+    position: "relative",
+  }
+
+  const eyeButtonStyle: React.CSSProperties = {
+    position: "absolute",
+    right: "16px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "#94a3b8",
+    padding: "4px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  }
 
   return (
-    <div className="max-w-4xl space-y-6">
-      {/* Personal Information */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Thông tin cá nhân</h1>
-          {!isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Chỉnh sửa
-            </button>
-          )}
+    <div style={containerStyle}>
+      {/* Header with Avatar */}
+      <div style={headerStyle}>
+        <div style={headerPatternStyle} />
+        <div style={{ display: "flex", alignItems: "center", gap: "24px", position: "relative", zIndex: 1 }}>
+          <div style={avatarStyle}>
+            <UserIcon size={40} color="#667eea" />
+          </div>
+          <div>
+            <h1 style={{ fontSize: "28px", fontWeight: 700, margin: "0 0 8px 0" }}>{user.profile.name}</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", opacity: 0.9 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px" }}>
+                <IdCard size={16} />
+                {user.profile.patientId || "N/A"}
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px" }}>
+                <Phone size={16} />
+                {user.profile.phone}
+              </span>
+            </div>
+          </div>
         </div>
-
-        {success && (
-          <div className="mb-4 bg-green-50 text-green-700 px-4 py-3 rounded-lg">
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <UserIcon className="w-4 h-4" />
-                Mã bệnh nhân
-              </label>
-              <input
-                type="text"
-                value={formData.patientId || ''}
-                disabled
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
-              />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <UserIcon className="w-4 h-4" />
-                Họ và tên
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-              />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <Phone className="w-4 h-4" />
-                Số điện thoại
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                CCCD
-              </label>
-              <input
-                type="text"
-                name="cccd"
-                value={formData.cccd}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-              />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4" />
-                Ngày sinh
-              </label>
-              <input
-                type="date"
-                name="dateOfBirth"
-                value={formData.dateOfBirth}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Giới tính
-              </label>
-              <input
-                type="text"
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-              />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <Mail className="w-4 h-4" />
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-              />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <Droplet className="w-4 h-4" />
-                Nhóm máu
-              </label>
-              <input
-                type="text"
-                name="bloodType"
-                value={formData.bloodType}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-              />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <AlertCircle className="w-4 h-4" />
-                Liên hệ khẩn cấp
-              </label>
-              <input
-                type="tel"
-                name="emergencyContact"
-                value={formData.emergencyContact}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-              />
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-              <MapPin className="w-4 h-4" />
-              Địa chỉ
-            </label>
-            <input
-              type="text"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              disabled={!isEditing}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-            />
-          </div>
-
-          {isEditing && (
-            <div className="mt-6 flex gap-4">
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Lưu thay đổi
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData(user.profile);
-                  setIsEditing(false);
-                }}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-              >
-                Hủy
-              </button>
-            </div>
-          )}
-        </form>
+        <div
+          style={{
+            position: "absolute",
+            top: "20px",
+            right: "24px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "rgba(255,255,255,0.2)",
+            padding: "8px 16px",
+            borderRadius: "30px",
+            fontSize: "13px",
+          }}
+        >
+          <Sparkles size={16} />
+          Hồ sơ bệnh nhân
+        </div>
       </div>
 
-      {/* Medical History */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Heart className="w-6 h-6 text-red-500" />
-            Tiền sử bệnh lý
-          </h2>
-          <button
-            onClick={() => setIsAddingCondition(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Thêm bệnh lý
-          </button>
+      {/* Tab Navigation */}
+      <div style={tabContainerStyle}>
+        {tabs.map((tab) => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              onMouseEnter={() => setHoveredTab(tab.id)}
+              onMouseLeave={() => setHoveredTab(null)}
+              style={getTabStyle(tab.id, tab.gradient)}
+            >
+              <Icon size={20} />
+              <span>{tab.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Success/Error Message */}
+      {success && (
+        <div
+          style={{
+            ...alertStyle,
+            ...(success.includes("Lỗi") || success.includes("không") ? alertErrorStyle : alertSuccessStyle),
+          }}
+        >
+          {success.includes("Lỗi") || success.includes("không") ? <XCircle size={20} /> : <CheckCircle2 size={20} />}
+          {success}
         </div>
+      )}
 
-        {/* Add/Edit Form */}
-        {(isAddingCondition || editingConditionId) && (
-          <div className="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50">
-            <h3 className="font-semibold mb-4">
-              {isAddingCondition ? 'Thêm tiền sử bệnh lý mới' : 'Chỉnh sửa tiền sử bệnh lý'}
-            </h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Loại *
-                </label>
-                <select
-                  value={conditionFormData.type}
-                  onChange={(e) => setConditionFormData({ ...conditionFormData, type: e.target.value as any })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="disease">Bệnh nền</option>
-                  <option value="allergy">Dị ứng</option>
-                  <option value="surgery">Phẫu thuật</option>
-                </select>
+      {/* Personal Info Tab */}
+      {activeTab === "personal" && (
+        <div style={cardStyle}>
+          <div style={cardHeaderStyle}>
+            <h2 style={titleStyle}>
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <UserIcon size={22} color="#ffffff" />
               </div>
+              Thông tin cá nhân
+            </h2>
+            {!isEditing && (
+              <button style={buttonStyle} onClick={() => setIsEditing(true)}>
+                <Edit size={18} />
+                Cập nhật thông tin
+              </button>
+            )}
+          </div>
 
+          <form onSubmit={handleSubmit}>
+            <div style={formGridStyle}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tên bệnh lý *
+                <label style={labelStyle}>
+                  <IdCard size={18} color="#3b82f6" />
+                  Mã bệnh nhân
                 </label>
                 <input
                   type="text"
-                  value={conditionFormData.condition}
-                  onChange={(e) => setConditionFormData({ ...conditionFormData, condition: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
+                  value={formData.patientId || ""}
+                  disabled
+                  style={{ ...inputStyle, ...inputDisabledStyle }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ngày chẩn đoán *
+                <label style={labelStyle}>
+                  <UserIcon size={18} color="#3b82f6" />
+                  Họ và tên
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  style={{ ...inputStyle, ...(!isEditing ? inputDisabledStyle : {}) }}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>
+                  <Phone size={18} color="#10b981" />
+                  Số điện thoại
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  style={{ ...inputStyle, ...(!isEditing ? inputDisabledStyle : {}) }}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>
+                  <IdCard size={18} color="#8b5cf6" />
+                  CCCD
+                </label>
+                <input
+                  type="text"
+                  name="cccd"
+                  value={formData.cccd}
+                  disabled
+                  style={{ ...inputStyle, ...inputDisabledStyle }}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>
+                  <Calendar size={18} color="#f59e0b" />
+                  Ngày sinh
                 </label>
                 <input
                   type="date"
-                  value={conditionFormData.diagnosedDate}
-                  onChange={(e) => setConditionFormData({ ...conditionFormData, diagnosedDate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
+                  name="dateOfBirth"
+                  value={formData.dateOfBirth}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  style={{ ...inputStyle, ...(!isEditing ? inputDisabledStyle : {}) }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mức độ
+                <label style={labelStyle}>
+                  <Users size={18} color="#ec4899" />
+                  Giới tính
                 </label>
-                <select
-                  value={conditionFormData.severity}
-                  onChange={(e) => setConditionFormData({ ...conditionFormData, severity: e.target.value as any })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="mild">Nhẹ</option>
-                  <option value="moderate">Trung bình</option>
-                  <option value="severe">Nặng</option>
-                </select>
+                <input
+                  type="text"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  style={{ ...inputStyle, ...(!isEditing ? inputDisabledStyle : {}) }}
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Trạng thái
+                <label style={labelStyle}>
+                  <Mail size={18} color="#06b6d4" />
+                  Email
                 </label>
-                <select
-                  value={conditionFormData.status}
-                  onChange={(e) => setConditionFormData({ ...conditionFormData, status: e.target.value as any })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="active">Đang điều trị</option>
-                  <option value="resolved">Đã khỏi</option>
-                </select>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  style={{ ...inputStyle, ...(!isEditing ? inputDisabledStyle : {}) }}
+                />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ghi chú
+              <div>
+                <label style={labelStyle}>
+                  <Phone size={18} color="#ef4444" />
+                  Liên hệ khẩn cấp
                 </label>
-                <textarea
-                  value={conditionFormData.notes}
-                  onChange={(e) => setConditionFormData({ ...conditionFormData, notes: e.target.value })}
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Thông tin thêm về bệnh lý..."
+                <input
+                  type="tel"
+                  name="emergencyContact"
+                  value={formData.emergencyContact}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  style={{ ...inputStyle, ...(!isEditing ? inputDisabledStyle : {}) }}
+                />
+              </div>
+
+              <div style={{ gridColumn: "span 2" }}>
+                <label style={labelStyle}>
+                  <MapPin size={18} color="#f97316" />
+                  Địa chỉ
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  style={{ ...inputStyle, ...(!isEditing ? inputDisabledStyle : {}) }}
                 />
               </div>
             </div>
 
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={isAddingCondition ? handleAddCondition : handleUpdateCondition}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Lưu
-              </button>
-              <button
-                onClick={resetConditionForm}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center gap-2"
-              >
-                <X className="w-4 h-4" />
-                Hủy
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Conditions List */}
-        {conditions.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Heart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>Chưa có tiền sử bệnh lý nào được ghi nhận</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {conditions.map(condition => (
+            {isEditing && (
               <div
-                key={condition.id}
-                className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition"
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "12px",
+                  marginTop: "32px",
+                  paddingTop: "24px",
+                  borderTopWidth: "2px",
+                  borderTopStyle: "solid",
+                  borderTopColor: "#f1f5f9",
+                }}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-gray-900">
-                        {condition.condition}
-                      </h3>
-                      <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
-                        {getTypeLabel(condition.type)}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getSeverityColor(condition.severity)}`}>
-                        {getSeverityLabel(condition.severity)}
-                      </span>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          condition.status === 'active'
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}
-                      >
-                        {condition.status === 'active' ? 'Đang điều trị' : 'Đã khỏi'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      Chẩn đoán: {new Date(condition.diagnosedDate).toLocaleDateString('vi-VN')}
-                    </p>
-                    {condition.notes && (
-                      <p className="text-sm text-gray-700">{condition.notes}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEditCondition(condition.id)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                      title="Chỉnh sửa"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCondition(condition.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                      title="Xóa"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                <button
+                  type="button"
+                  style={buttonSecondaryStyle}
+                  onClick={() => {
+                    setIsEditing(false)
+                    setFormData(user.profile)
+                  }}
+                >
+                  Hủy bỏ
+                </button>
+                <button type="submit" style={buttonSuccessStyle}>
+                  <Save size={18} />
+                  Lưu thay đổi
+                </button>
+              </div>
+            )}
+          </form>
+        </div>
+      )}
+
+      {/* Medical History Tab */}
+      {activeTab === "medical" && (
+        <div style={cardStyle}>
+          <div style={cardHeaderStyle}>
+            <h2 style={titleStyle}>
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Heart size={22} color="#ffffff" />
+              </div>
+              Tiền sử bệnh lý
+            </h2>
+            {!isAddingCondition && !editingConditionId && (
+              <button style={buttonStyle} onClick={() => setIsAddingCondition(true)}>
+                <Plus size={18} />
+                Thêm mới
+              </button>
+            )}
+          </div>
+
+          {/* Add/Edit Form */}
+          {(isAddingCondition || editingConditionId) && (
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+                borderRadius: "20px",
+                padding: "28px",
+                marginBottom: "28px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <h3 style={{ margin: "0 0 24px 0", fontSize: "18px", fontWeight: 600, color: "#1e293b" }}>
+                {editingConditionId ? "Chỉnh sửa tiền sử bệnh lý" : "Thêm tiền sử bệnh lý mới"}
+              </h3>
+              <div style={formGridStyle}>
+                <div>
+                  <label style={labelStyle}>Tên bệnh lý *</label>
+                  <input
+                    type="text"
+                    value={conditionFormData.condition || ""}
+                    onChange={(e) => setConditionFormData({ ...conditionFormData, condition: e.target.value })}
+                    style={inputStyle}
+                    placeholder="Nhập tên bệnh lý"
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Loại</label>
+                  <select
+                    value={conditionFormData.type || "disease"}
+                    onChange={(e) => setConditionFormData({ ...conditionFormData, type: e.target.value as any })}
+                    style={selectStyle}
+                  >
+                    <option value="disease">Bệnh nền</option>
+                    <option value="allergy">Dị ứng</option>
+                    <option value="surgery">Phẫu thuật</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Ngày phát hiện</label>
+                  <input
+                    type="date"
+                    value={conditionFormData.diagnosedDate || ""}
+                    onChange={(e) => setConditionFormData({ ...conditionFormData, diagnosedDate: e.target.value })}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Mức độ</label>
+                  <select
+                    value={conditionFormData.severity || "mild"}
+                    onChange={(e) => setConditionFormData({ ...conditionFormData, severity: e.target.value as any })}
+                    style={selectStyle}
+                  >
+                    <option value="mild">Nhẹ</option>
+                    <option value="moderate">Trung bình</option>
+                    <option value="severe">Nặng</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Trạng thái</label>
+                  <select
+                    value={conditionFormData.status || "active"}
+                    onChange={(e) => setConditionFormData({ ...conditionFormData, status: e.target.value as any })}
+                    style={selectStyle}
+                  >
+                    <option value="active">Đang điều trị</option>
+                    <option value="resolved">Đã khỏi</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn: "span 2" }}>
+                  <label style={labelStyle}>Ghi chú</label>
+                  <textarea
+                    value={conditionFormData.notes || ""}
+                    onChange={(e) => setConditionFormData({ ...conditionFormData, notes: e.target.value })}
+                    style={textareaStyle}
+                    placeholder="Thêm ghi chú về tình trạng bệnh lý..."
+                  />
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
+                <button type="button" style={buttonSecondaryStyle} onClick={resetConditionForm}>
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  style={buttonSuccessStyle}
+                  onClick={editingConditionId ? handleUpdateCondition : handleAddCondition}
+                >
+                  <Save size={18} />
+                  {editingConditionId ? "Cập nhật" : "Thêm mới"}
+                </button>
+              </div>
+            </div>
+          )}
 
-      {/* Change Password */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Lock className="w-6 h-6 text-blue-600" />
-            Đổi mật khẩu
-          </h2>
-          {!showPasswordForm && (
-            <button
-              onClick={() => setShowPasswordForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Key className="w-4 h-4" />
-              Đổi mật khẩu
-            </button>
+          {/* Conditions List */}
+          {conditions.length === 0 ? (
+            <div style={emptyStateStyle}>
+              <div
+                style={{
+                  width: "80px",
+                  height: "80px",
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 20px",
+                }}
+              >
+                <Heart size={36} color="#ec4899" />
+              </div>
+              <h3 style={{ fontSize: "18px", fontWeight: 600, color: "#1e293b", margin: "0 0 8px 0" }}>
+                Chưa có tiền sử bệnh lý
+              </h3>
+              <p style={{ color: "#64748b", margin: 0, fontSize: "15px" }}>
+                Nhấn nút "Thêm mới" để bắt đầu ghi nhận tiền sử bệnh lý
+              </p>
+            </div>
+          ) : (
+            <div>
+              {conditions.map((condition) => (
+                <div key={condition.id} style={conditionCardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "20px" }}>
+                      <div
+                        style={{
+                          width: "56px",
+                          height: "56px",
+                          borderRadius: "16px",
+                          background: getTypeGradient(condition.type),
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#ffffff",
+                          boxShadow: "0 8px 16px rgba(0,0,0,0.15)",
+                        }}
+                      >
+                        {getTypeIcon(condition.type)}
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: "18px", fontWeight: 600, color: "#1e293b", margin: "0 0 10px 0" }}>
+                          {condition.condition}
+                        </h3>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+                          <span
+                            style={{
+                              padding: "5px 14px",
+                              borderRadius: "20px",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              backgroundColor: "#f1f5f9",
+                              color: "#475569",
+                            }}
+                          >
+                            {getTypeLabel(condition.type)}
+                          </span>
+                          <span
+                            style={{
+                              padding: "5px 14px",
+                              borderRadius: "20px",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              ...getSeverityStyle(condition.severity),
+                            }}
+                          >
+                            {getSeverityLabel(condition.severity)}
+                          </span>
+                          <span
+                            style={{
+                              padding: "5px 14px",
+                              borderRadius: "20px",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              backgroundColor: condition.status === "active" ? "#dbeafe" : "#d1fae5",
+                              color: condition.status === "active" ? "#1d4ed8" : "#047857",
+                            }}
+                          >
+                            {condition.status === "active" ? "Đang điều trị" : "Đã khỏi"}
+                          </span>
+                        </div>
+                        {condition.diagnosedDate && (
+                          <p
+                            style={{
+                              fontSize: "13px",
+                              color: "#64748b",
+                              margin: "0 0 6px 0",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                          >
+                            <Calendar size={14} />
+                            Phát hiện: {new Date(condition.diagnosedDate).toLocaleDateString("vi-VN")}
+                          </p>
+                        )}
+                        {condition.notes && (
+                          <p style={{ fontSize: "14px", color: "#64748b", margin: 0, fontStyle: "italic" }}>
+                            "{condition.notes}"
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        style={{ ...buttonSecondaryStyle, padding: "10px 14px" }}
+                        onClick={() => handleEditCondition(condition.id)}
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button style={buttonDangerStyle} onClick={() => handleDeleteCondition(condition.id)}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
+      )}
 
-        {showPasswordForm && (
-          <form onSubmit={handlePasswordChange}>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mật khẩu hiện tại *
-                </label>
-                <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+      {/* Password Change Tab */}
+      {activeTab === "password" && (
+        <div style={cardStyle}>
+          <div style={passwordContainerStyle}>
+            <div style={passwordHeaderStyle}>
+              <div style={passwordIconStyle}>
+                <Key size={44} color="#ffffff" />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mật khẩu mới *
-                </label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Xác nhận mật khẩu mới *
-                </label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
+              <h2 style={{ fontSize: "26px", fontWeight: 700, color: "#1e293b", margin: "0 0 8px 0" }}>Đổi mật khẩu</h2>
+              <p style={{ color: "#64748b", margin: 0, fontSize: "15px" }}>
+                Cập nhật mật khẩu để bảo vệ tài khoản của bạn
+              </p>
             </div>
 
-            <div className="flex gap-2 mt-6">
+            <form onSubmit={handlePasswordChange}>
+              <div style={{ marginBottom: "24px" }}>
+                <label style={labelStyle}>
+                  <Lock size={18} color="#64748b" />
+                  Mật khẩu hiện tại
+                </label>
+                <div style={inputWrapperStyle}>
+                  <input
+                    type={showPasswords.current ? "text" : "password"}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    style={{ ...inputStyle, paddingRight: "50px" }}
+                    placeholder="Nhập mật khẩu hiện tại"
+                  />
+                  <button
+                    type="button"
+                    style={eyeButtonStyle}
+                    onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                  >
+                    {showPasswords.current ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "24px" }}>
+                <label style={labelStyle}>
+                  <Key size={18} color="#64748b" />
+                  Mật khẩu mới
+                </label>
+                <div style={inputWrapperStyle}>
+                  <input
+                    type={showPasswords.new ? "text" : "password"}
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    style={{ ...inputStyle, paddingRight: "50px" }}
+                    placeholder="Nhập mật khẩu mới"
+                  />
+                  <button
+                    type="button"
+                    style={eyeButtonStyle}
+                    onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                  >
+                    {showPasswords.new ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "32px" }}>
+                <label style={labelStyle}>
+                  <Shield size={18} color="#64748b" />
+                  Xác nhận mật khẩu mới
+                </label>
+                <div style={inputWrapperStyle}>
+                  <input
+                    type={showPasswords.confirm ? "text" : "password"}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    style={{ ...inputStyle, paddingRight: "50px" }}
+                    placeholder="Nhập lại mật khẩu mới"
+                  />
+                  <button
+                    type="button"
+                    style={eyeButtonStyle}
+                    onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                  >
+                    {showPasswords.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Lưu mật khẩu
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPasswordForm(false);
-                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                style={{
+                  ...buttonSuccessStyle,
+                  width: "100%",
+                  justifyContent: "center",
+                  padding: "16px 24px",
+                  fontSize: "16px",
                 }}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
               >
-                Hủy
+                <Save size={20} />
+                Cập nhật mật khẩu
               </button>
-            </div>
-          </form>
-        )}
+            </form>
 
-        {!showPasswordForm && (
-          <p className="text-gray-600 text-sm">
-            Để bảo vệ tài khoản của bạn, vui lòng sử dụng mật khẩu mạnh và thay đổi định kỳ.
-          </p>
-        )}
-      </div>
+            <div style={securityNoteStyle}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "10px",
+                    backgroundColor: "#3b82f6",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Shield size={20} color="#ffffff" />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: "15px", fontWeight: 600, color: "#1e40af", margin: "0 0 8px 0" }}>
+                    Lưu ý bảo mật
+                  </h4>
+                  <ul style={{ margin: 0, paddingLeft: "18px", color: "#1e40af", fontSize: "13px", lineHeight: 1.7 }}>
+                    <li>Mật khẩu phải có ít nhất 6 ký tự</li>
+                    <li>Sử dụng kết hợp chữ hoa, chữ thường và số</li>
+                    <li>Không chia sẻ mật khẩu với người khác</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  )
 }
