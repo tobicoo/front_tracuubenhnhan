@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, User, Phone, Mail, Calendar, Eye, Heart } from 'lucide-react';
+import { Search, User, Phone, IdCard, Hash, Eye, Heart } from 'lucide-react';
 
 interface Patient {
   id: string;
@@ -9,6 +9,8 @@ interface Patient {
     name: string;
     email: string;
     phone: string;
+    patientId: string;
+    cccd: string;
     dateOfBirth: string;
     gender: string;
     address: string;
@@ -42,12 +44,21 @@ export default function SearchPatients({ doctorId }: SearchPatientsProps) {
   }, []);
 
   const loadPatients = () => {
+  try {
     const usersData = localStorage.getItem('users');
-    if (usersData) {
-      const users = JSON.parse(usersData);
-      setPatients(users.filter((u: Patient) => u.role === 'patient'));
+    if (!usersData) {
+      setPatients([]);
+      return;
     }
-  };
+
+    const users: Patient[] = JSON.parse(usersData);
+    setPatients(users.filter(u => u.role === 'patient'));
+  } catch (error) {
+    console.error('Lỗi load patients:', error);
+    setPatients([]);
+  }
+};
+
 
   const viewPatientDetails = (patient: Patient) => {
     setSelectedPatient(patient);
@@ -63,7 +74,8 @@ export default function SearchPatients({ doctorId }: SearchPatientsProps) {
   const filteredPatients = patients.filter(patient =>
     patient.profile.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.profile.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.profile.phone.includes(searchTerm)
+    patient.profile.phone.includes(searchTerm) ||
+    patient.profile.patientId.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -77,7 +89,7 @@ export default function SearchPatients({ doctorId }: SearchPatientsProps) {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên, email, số điện thoại..."
+              placeholder="Tìm kiếm theo mã bệnh nhân, CCCD,..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -109,12 +121,12 @@ export default function SearchPatients({ doctorId }: SearchPatientsProps) {
                         {patient.profile.phone}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        {patient.profile.email}
+                        <Hash className="w-4 h-4" />
+                        {patient.profile.patientId}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(patient.profile.dateOfBirth).toLocaleDateString('vi-VN')}
+                        <IdCard className="w-4 h-4" />
+                        {patient.profile.cccd}
                       </div>
                     </div>
                   </div>
