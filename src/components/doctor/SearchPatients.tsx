@@ -44,12 +44,21 @@ export default function SearchPatients({ doctorId }: SearchPatientsProps) {
   }, []);
 
   const loadPatients = () => {
+  try {
     const usersData = localStorage.getItem('users');
-    if (usersData) {
-      const users = JSON.parse(usersData);
-      setPatients(users.filter((u: Patient) => u.role === 'patient'));
+    if (!usersData) {
+      setPatients([]);
+      return;
     }
-  };
+
+    const users: Patient[] = JSON.parse(usersData);
+    setPatients(users.filter(u => u.role === 'patient'));
+  } catch (error) {
+    console.error('Lỗi load patients:', error);
+    setPatients([]);
+  }
+};
+
 
   const viewPatientDetails = (patient: Patient) => {
     setSelectedPatient(patient);
