@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useNavigate } from "react-router-dom" // 1. Import useNavigate
+// SỬA LẠI: Dùng useNavigate của react-router-dom (Chuẩn Vite)
+import { useNavigate } from "react-router-dom" 
 import { useState, useEffect } from "react"
 import {
   Activity,
@@ -43,7 +44,9 @@ interface PatientDashboardHomeProps {
 }
 
 export default function PatientDashboardHome({ userId, userName }: PatientDashboardHomeProps) {
-  const navigate = useNavigate() // 2. Khai báo hook
+  // SỬA LẠI: Dùng hook navigate
+  const navigate = useNavigate() 
+  
   const [stats, setStats] = useState({
     totalVisits: 0,
     activeConditions: 0,
@@ -54,40 +57,30 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
+    const loadStats = async () => {
+      try {
+        // Gọi API lấy thống kê
+        const response = await fetch(`https://api-du-an.com/dashboard/stats?patientId=${userId}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            setStats({
+              totalVisits: data.totalVisits || 0,
+              activeConditions: data.activeConditions || 0,
+              upcomingAppointments: data.upcomingAppointments || 0,
+              recentVisits: data.recentVisits || [],
+            });
+        }
+      } catch (error) {
+        console.error("Lỗi tải dashboard:", error);
+      }
+    };
+
     loadStats()
+    
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(timer)
   }, [userId])
-
-  const loadStats = () => {
-    const recordsData = localStorage.getItem("medicalRecords")
-    let totalVisits = 0
-    let recentVisits: MedicalRecord[] = []
-
-    if (recordsData) {
-      const allRecords: MedicalRecord[] = JSON.parse(recordsData)
-      const userRecords = allRecords.filter((r) => r.patientId === userId)
-      totalVisits = userRecords.length
-      recentVisits = userRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 3)
-    }
-
-    const historyData = localStorage.getItem("medicalHistory")
-    let activeConditions = 0
-
-    if (historyData) {
-      const allHistory: MedicalCondition[] = JSON.parse(historyData)
-      activeConditions = allHistory.filter((h) => h.patientId === userId && h.status === "active").length
-    }
-
-    const upcomingAppointments = 0
-
-    setStats({
-      totalVisits,
-      activeConditions,
-      upcomingAppointments,
-      recentVisits,
-    })
-  }
 
   const getGreeting = () => {
     const hour = currentTime.getHours()
@@ -113,12 +106,12 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
     return date.toLocaleDateString("vi-VN", options)
   }
 
-  // 3. Sửa hàm điều hướng
   const handleNavigate = (path: string) => {
+    // SỬA LẠI: Dùng navigate() thay vì router.push()
     navigate(path) 
   }
 
-  // ... (Giữ nguyên phần styles, không thay đổi gì ở đây) ...
+  // --- PHẦN STYLE GIỮ NGUYÊN KHÔNG ĐỔI ---
   const styles: { [key: string]: React.CSSProperties } = {
     container: {
       maxWidth: "1200px",
@@ -126,9 +119,6 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
       padding: "24px",
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     },
-    // ... (Các style khác giữ nguyên như cũ) ...
-    // Để tiết kiệm không gian, tôi không paste lại toàn bộ phần style dài dòng
-    // Bạn hãy giữ nguyên phần style cũ trong file của bạn
     welcomeSection: {
       background: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
       borderRadius: "24px",
@@ -391,7 +381,6 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
     },
   }
 
-  // Responsive styles for mobile
   const mediaStyles = `
     @media (max-width: 768px) {
       .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -423,9 +412,6 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
 
         {/* Stats Cards */}
         <div className="stats-grid" style={styles.statsGrid}>
-          {/* ... (Giữ nguyên phần render Stats) ... */}
-          {/* Để gọn code, tôi không paste lại, bạn giữ nguyên phần render này */}
-          {/* Chỉ cần chú ý là các thẻ div này không có onClick điều hướng nên không ảnh hưởng */}
            <div
             style={{
               ...styles.statCard,
@@ -550,7 +536,7 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
               </h2>
               <button
                 style={styles.viewAllBtn}
-                onClick={() => handleNavigate("/patient/records")} // SỬA ĐÚNG
+                onClick={() => handleNavigate("/patient/records")}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#eef2ff")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
@@ -572,7 +558,7 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
                   <div
                     key={visit.id}
                     style={styles.visitCard}
-                    onClick={() => handleNavigate("/patient/records")} // SỬA ĐÚNG
+                    onClick={() => handleNavigate("/patient/records")}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = "#6366f1"
                       e.currentTarget.style.background = "#fafafa"
@@ -622,7 +608,7 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
             {/* Nút 1: Tra cứu */}
             <div
               style={styles.quickActionCard}
-              onClick={() => handleNavigate("/patient/records")} // SỬA ĐÚNG
+              onClick={() => handleNavigate("/patient/records")}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = "#6366f1"
                 e.currentTarget.style.boxShadow = "0 4px 15px rgba(99, 102, 241, 0.15)"
@@ -645,7 +631,7 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
             {/* Nút 2: Cập nhật thông tin */}
             <div
               style={styles.quickActionCard}
-              onClick={() => handleNavigate("/patient/profile")} // SỬA ĐÚNG (Trỏ về profile)
+              onClick={() => handleNavigate("/patient/profile")}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = "#a855f7"
                 e.currentTarget.style.boxShadow = "0 4px 15px rgba(168, 85, 247, 0.15)"
@@ -668,7 +654,7 @@ export default function PatientDashboardHome({ userId, userName }: PatientDashbo
             {/* Nút 3: Quản lý bệnh lý */}
             <div
               style={styles.quickActionCard}
-              onClick={() => handleNavigate("/patient/profile")} // SỬA ĐÚNG (Trỏ về profile)
+              onClick={() => handleNavigate("/patient/profile")}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = "#ef4444"
                 e.currentTarget.style.boxShadow = "0 4px 15px rgba(239, 68, 68, 0.15)"

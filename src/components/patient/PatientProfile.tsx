@@ -93,17 +93,21 @@ export default function PatientProfile({ user }: PatientProfileProps) {
 
   const [hoveredTab, setHoveredTab] = useState<string | null>(null)
 
+  // --- 1. Load dữ liệu từ API khi vào trang ---
   useEffect(() => {
     loadConditions()
   }, [user.id])
 
-  const loadConditions = () => {
-    const historyData = localStorage.getItem("medicalHistory")
-    if (historyData) {
-      const allHistory: MedicalCondition[] = JSON.parse(historyData)
-      setConditions(allHistory.filter((h) => h.patientId === user.id))
-    } else {
-      setConditions([])
+  const loadConditions = async () => {
+    try {
+      // Thay URL bằng API thật của bạn
+      const res = await fetch(`https://api-du-an.com/medical-conditions?patientId=${user.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setConditions(data)
+      }
+    } catch (error) {
+      console.error("Lỗi tải dữ liệu bệnh lý:", error)
     }
   }
 
@@ -114,55 +118,55 @@ export default function PatientProfile({ user }: PatientProfileProps) {
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // --- 2. Cập nhật thông tin cá nhân (API PUT) ---
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Validate dữ liệu
     if (!formData.name.trim()) {
       setSuccess("Lỗi: Họ và tên không được để trống!")
       return
     }
-
     const phoneRegex = /^[0-9]{10,11}$/
     if (!phoneRegex.test(formData.phone)) {
       setSuccess("Lỗi: Số điện thoại không hợp lệ!")
       return
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (formData.email && !emailRegex.test(formData.email)) {
       setSuccess("Lỗi: Định dạng Email không đúng!")
       return
     }
 
-    const usersData = localStorage.getItem("users")
-    if (usersData) {
-      const users: User[] = JSON.parse(usersData)
-      const userIndex = users.findIndex((u) => u.id === user.id)
-      if (userIndex !== -1) {
-        users[userIndex].profile = formData
-        localStorage.setItem("users", JSON.stringify(users))
-        const currentUser = { ...user, profile: formData }
-        localStorage.setItem("currentUser", JSON.stringify(currentUser))
+    try {
+      const response = await fetch(`https://api-du-an.com/users/${user.id}/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+
+      if (response.ok) {
         setSuccess("Cập nhật thành công!")
         setIsEditing(false)
-        setTimeout(() => setSuccess(""), 3000)
+      } else {
+        setSuccess("Lỗi: Server không nhận dữ liệu.")
       }
-    } else {
-      setSuccess("Cập nhật thành công!")
-      setIsEditing(false)
-      setTimeout(() => setSuccess(""), 3000)
+    } catch (error) {
+      setSuccess("Lỗi kết nối server.")
     }
+
+    setTimeout(() => setSuccess(""), 3000)
   }
 
-  const handleAddCondition = () => {
+  // --- 3. Thêm bệnh lý mới (API POST) ---
+  const handleAddCondition = async () => {
     if (!conditionFormData.condition?.trim()) {
       setSuccess("Lỗi: Vui lòng nhập tên bệnh lý!")
       setTimeout(() => setSuccess(""), 3000)
       return
     }
 
-    const newCondition: MedicalCondition = {
-      id: "cond_" + Date.now().toString(),
+    const newCondition = {
       patientId: user.id,
       condition: conditionFormData.condition || "",
       type: conditionFormData.type || "disease",
@@ -172,14 +176,24 @@ export default function PatientProfile({ user }: PatientProfileProps) {
       notes: conditionFormData.notes || "",
     }
 
-    const historyData = localStorage.getItem("medicalHistory")
-    const allHistory: MedicalCondition[] = historyData ? JSON.parse(historyData) : []
-    allHistory.push(newCondition)
-    localStorage.setItem("medicalHistory", JSON.stringify(allHistory))
+    try {
+      const response = await fetch("https://api-du-an.com/medical-conditions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCondition),
+      })
 
-    loadConditions()
-    resetConditionForm()
-    setSuccess("Thêm tiền sử bệnh lý thành công!")
+      if (response.ok) {
+        loadConditions() // Tải lại danh sách sau khi thêm
+        resetConditionForm()
+        setSuccess("Thêm tiền sử bệnh lý thành công!")
+      } else {
+        setSuccess("Lỗi: Không thể thêm mới.")
+      }
+    } catch (error) {
+      setSuccess("Lỗi kết nối server.")
+    }
+
     setTimeout(() => setSuccess(""), 3000)
   }
 
@@ -191,32 +205,49 @@ export default function PatientProfile({ user }: PatientProfileProps) {
     }
   }
 
-  const handleUpdateCondition = () => {
-    const historyData = localStorage.getItem("medicalHistory")
-    if (historyData) {
-      const allHistory: MedicalCondition[] = JSON.parse(historyData)
-      const index = allHistory.findIndex((h) => h.id === editingConditionId)
-      if (index !== -1) {
-        allHistory[index] = { ...allHistory[index], ...conditionFormData }
-        localStorage.setItem("medicalHistory", JSON.stringify(allHistory))
+  // --- 4. Cập nhật bệnh lý (API PUT) ---
+  const handleUpdateCondition = async () => {
+    if (!editingConditionId) return
+
+    try {
+      const response = await fetch(`https://api-du-an.com/medical-conditions/${editingConditionId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(conditionFormData),
+      })
+
+      if (response.ok) {
         loadConditions()
+        resetConditionForm()
+        setSuccess("Cập nhật tiền sử bệnh lý thành công!")
+      } else {
+        setSuccess("Lỗi: Không thể cập nhật.")
       }
+    } catch (error) {
+      setSuccess("Lỗi kết nối server.")
     }
-    resetConditionForm()
-    setSuccess("Cập nhật tiền sử bệnh lý thành công!")
+
     setTimeout(() => setSuccess(""), 3000)
   }
 
-  const handleDeleteCondition = (id: string) => {
+  // --- 5. Xóa bệnh lý (API DELETE) ---
+  const handleDeleteCondition = async (id: string) => {
     if (confirm("Bạn có chắc chắn muốn xóa tiền sử bệnh lý này?")) {
-      const historyData = localStorage.getItem("medicalHistory")
-      if (historyData) {
-        const allHistory: MedicalCondition[] = JSON.parse(historyData)
-        const filtered = allHistory.filter((h) => h.id !== id)
-        localStorage.setItem("medicalHistory", JSON.stringify(filtered))
+      try {
+        const response = await fetch(`https://api-du-an.com/medical-conditions/${id}`, {
+          method: "DELETE",
+        })
+
+        if (response.ok) {
+          loadConditions()
+          setSuccess("Xóa tiền sử bệnh lý thành công!")
+        } else {
+          setSuccess("Lỗi: Không thể xóa dữ liệu.")
+        }
+      } catch (error) {
+        setSuccess("Lỗi kết nối server.")
       }
-      loadConditions()
-      setSuccess("Xóa tiền sử bệnh lý thành công!")
+
       setTimeout(() => setSuccess(""), 3000)
     }
   }
@@ -234,7 +265,8 @@ export default function PatientProfile({ user }: PatientProfileProps) {
     setEditingConditionId(null)
   }
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  // --- 6. Đổi mật khẩu (API POST) ---
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -249,40 +281,31 @@ export default function PatientProfile({ user }: PatientProfileProps) {
       return
     }
 
-    const usersData = localStorage.getItem("users")
-    if (usersData) {
-      const users: User[] = JSON.parse(usersData)
-      const currentUserData = users.find((u) => u.id === user.id)
+    try {
+      const response = await fetch(`https://api-du-an.com/users/${user.id}/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      })
 
-      if (!currentUserData) {
-        setSuccess("Lỗi: Không tìm thấy người dùng!")
-        setTimeout(() => setSuccess(""), 3000)
-        return
-      }
-
-      if (currentUserData.password !== passwordData.currentPassword) {
-        setSuccess("Mật khẩu hiện tại không đúng!")
-        setTimeout(() => setSuccess(""), 3000)
-        return
-      }
-
-      const userIndex = users.findIndex((u) => u.id === user.id)
-      if (userIndex !== -1) {
-        users[userIndex].password = passwordData.newPassword
-        localStorage.setItem("users", JSON.stringify(users))
-        const updatedUser = { ...user, password: passwordData.newPassword }
-        localStorage.setItem("currentUser", JSON.stringify(updatedUser))
+      if (response.ok) {
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
         setSuccess("Đổi mật khẩu thành công!")
-        setTimeout(() => setSuccess(""), 3000)
+      } else {
+        const errData = await response.json()
+        setSuccess(errData.message || "Đổi mật khẩu thất bại (sai mật khẩu cũ)!")
       }
-    } else {
-      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
-      setSuccess("Đổi mật khẩu thành công!")
-      setTimeout(() => setSuccess(""), 3000)
+    } catch (error) {
+      setSuccess("Lỗi kết nối server.")
     }
+
+    setTimeout(() => setSuccess(""), 3000)
   }
 
+  // --- Các hàm UI Helper giữ nguyên ---
   const getTypeLabel = (type: string) => {
     switch (type) {
       case "disease":
@@ -369,6 +392,7 @@ export default function PatientProfile({ user }: PatientProfileProps) {
     },
   ]
 
+  // --- Các Styles giữ nguyên ---
   const containerStyle: React.CSSProperties = {
     maxWidth: "1000px",
     margin: "0 auto",
@@ -1208,7 +1232,9 @@ export default function PatientProfile({ user }: PatientProfileProps) {
               <div style={passwordIconStyle}>
                 <Key size={44} color="#ffffff" />
               </div>
-              <h2 style={{ fontSize: "26px", fontWeight: 700, color: "#1e293b", margin: "0 0 8px 0" }}>Đổi mật khẩu</h2>
+              <h2 style={{ fontSize: "26px", fontWeight: 700, color: "#1e293b", margin: "0 0 8px 0" }}>
+                Đổi mật khẩu
+              </h2>
               <p style={{ color: "#64748b", margin: 0, fontSize: "15px" }}>
                 Cập nhật mật khẩu để bảo vệ tài khoản của bạn
               </p>

@@ -58,75 +58,27 @@ export default function PatientRecords({ userId = "demo-user" }: PatientRecordsP
     setFilteredRecords(records)
   }, [records])
 
-  const loadRecords = () => {
-    const recordsData = localStorage.getItem("medicalRecords")
-    if (recordsData) {
-      const allRecords: MedicalRecord[] = JSON.parse(recordsData)
-      const userRecords = allRecords.filter((r) => r.patientId === userId)
-      userRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      setRecords(userRecords)
-    } else {
-      const sampleRecords: MedicalRecord[] = [
-        {
-          id: "LK001",
-          patientId: userId,
-          date: "2026-01-10",
-          doctorName: "BS. Nguyễn Văn A",
-          diagnosis: "Viêm họng cấp",
-          symptoms: "Đau họng, sốt nhẹ 38°C, khó nuốt",
-          treatment: "Kháng sinh Amoxicillin, thuốc giảm đau Paracetamol",
-          notes: "Tái khám sau 5 ngày nếu triệu chứng không giảm. Uống đủ nước, nghỉ ngơi.",
-          prescription: "Amoxicillin 500mg - 3 lần/ngày x 7 ngày\nParacetamol 500mg - 3 lần/ngày khi sốt",
-          cost: 350000,
-          testResults: "Xét nghiệm máu: Bạch cầu tăng nhẹ",
-          type: "Khám bệnh",
-        },
-        {
-          id: "LK002",
-          patientId: userId,
-          date: "2025-12-15",
-          doctorName: "BS. Trần Thị B",
-          diagnosis: "Khám sức khỏe định kỳ",
-          symptoms: "Không có triệu chứng bất thường",
-          treatment: "Không cần điều trị",
-          notes: "Sức khỏe tốt, duy trì chế độ sinh hoạt lành mạnh. Tập thể dục đều đặn.",
-          prescription: "",
-          cost: 200000,
-          testResults: "Xét nghiệm máu: Bình thường\nHuyết áp: 120/80 mmHg\nNhịp tim: 75 bpm",
-          type: "Khám định kỳ",
-        },
-        {
-          id: "LK003",
-          patientId: userId,
-          date: "2025-11-20",
-          doctorName: "BS. Lê Văn C",
-          diagnosis: "Đau dạ dày",
-          symptoms: "Đau bụng vùng thượng vị, ợ nóng, buồn nôn",
-          treatment: "Thuốc kháng acid, điều chỉnh chế độ ăn uống",
-          notes: "Ăn uống điều độ, tránh thức ăn cay nóng, rượu bia. Ăn nhiều bữa nhỏ.",
-          prescription: "Omeprazole 20mg - 2 lần/ngày trước ăn x 14 ngày\nGaviscon - 3 lần/ngày sau ăn",
-          cost: 420000,
-          testResults: "Nội soi dạ dày: Viêm niêm mạc dạ dày mức độ nhẹ",
-          type: "Khám bệnh",
-        },
-        {
-          id: "LK004",
-          patientId: userId,
-          date: "2025-10-05",
-          doctorName: "BS. Phạm Văn D",
-          diagnosis: "Tái khám sau điều trị viêm phổi",
-          symptoms: "Không còn triệu chứng, sức khỏe hồi phục tốt",
-          treatment: "Tiếp tục theo dõi, không cần dùng thuốc",
-          notes: "Phổi đã hồi phục hoàn toàn. Tái khám sau 3 tháng.",
-          cost: 150000,
-          testResults: "X-quang phổi: Bình thường",
-          type: "Tái khám",
-        },
-      ]
-      localStorage.setItem("medicalRecords", JSON.stringify(sampleRecords))
-      setRecords(sampleRecords)
+
+const loadRecords = async () => {
+  try {
+    const response = await fetch(`https://api-du-an.com/medical-records?patientId=${userId}`);
+    
+    if (!response.ok) {
+        throw new Error("Lỗi tải dữ liệu");
     }
+
+    const data = await response.json();
+    
+    const sortedData = data.sort((a: MedicalRecord, b: MedicalRecord) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    
+    setRecords(sortedData);
+  } catch (error) {
+    console.error("Lỗi:", error);
+    setRecords([]); 
   }
+};
 
   const handleSearch = () => {
     let filtered = [...records]
