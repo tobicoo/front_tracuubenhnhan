@@ -13,10 +13,22 @@ export default function UserManagement() {
     role: 'patient',
     profile: { name: '', email: '' }
   });
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     loadUsers();
   }, []);
+
+  useEffect(() => {
+  if (successMessage) {
+    const timer = setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+
+    return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   const loadUsers = () => {
     const usersData = localStorage.getItem('users');
@@ -25,12 +37,31 @@ export default function UserManagement() {
     }
   };
 
-  const handleAdd = () => {
-    if (!formData.username || !formData.newPassword || !formData.profile?.name) {
-      alert('Vui lòng điền đầy đủ thông tin bắt buộc');
-      return;
-    }
+  const validateForm = () => {
+  const newErrors: { [key: string]: string } = {};
 
+  if (!formData.username || formData.username.trim() === '') {
+    newErrors.username = 'Tên đăng nhập là bắt buộc.';
+  }
+
+  if (isAdding && (!formData.newPassword || formData.newPassword.trim() === '')) {
+    newErrors.newPassword = 'Mật khẩu là bắt buộc.';
+  }
+  
+  if (!formData.profile?.name || formData.profile.name.trim() === '') {
+    newErrors.name = 'Họ và tên là bắt buộc.';
+  }
+
+  if (!formData.role) {
+    newErrors.role = 'Vai trò là bắt buộc.';
+  }
+  setErrors(newErrors);
+
+  return Object.keys(newErrors).length === 0;
+  };
+
+  const handleAdd = () => {
+    if (!validateForm()) return;
     const newUser: User = {
       id: `user_${Date.now()}`,
       username: formData.username,
@@ -43,6 +74,8 @@ export default function UserManagement() {
     localStorage.setItem('users', JSON.stringify(updatedUsers));
     setUsers(updatedUsers);
     resetForm();
+
+    setSuccessMessage('Đã thêm người dùng mới thành công!'); 
   };
 
   const handleEdit = (id: string) => {
@@ -54,6 +87,7 @@ export default function UserManagement() {
   };
 
   const handleUpdate = () => {
+    if (!validateForm() || !editingId) return;
     const updatedUsers = users.map(user => {
       if (user.id === editingId) {
         return {
@@ -83,6 +117,8 @@ export default function UserManagement() {
     
     setUsers(updatedUsers);
     resetForm();
+
+    setSuccessMessage('Đã cập nhật người dùng thành công!');
   };
 
   const handleDelete = (id: string) => {
@@ -96,6 +132,7 @@ export default function UserManagement() {
       const updatedUsers = users.filter(u => u.id !== id);
       localStorage.setItem('users', JSON.stringify(updatedUsers));
       setUsers(updatedUsers);
+      setSuccessMessage('Đã xóa người dùng thành công!');
     }
   };
 
@@ -106,14 +143,14 @@ export default function UserManagement() {
       role: 'patient',
       profile: { name: '', email: '' }
     });
+    setErrors({});
     setIsAdding(false);
     setEditingId(null);
   };
 
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.profile?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.includes(searchTerm.toLowerCase())
+    user.profile?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getRoleName = (role: string) => {
@@ -154,13 +191,19 @@ export default function UserManagement() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên, username, vai trò..."
+              placeholder="Tìm kiếm theo tên, username, ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
         </div>
+
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-100 text-green-800 rounded-lg">
+            {successMessage}
+          </div>
+        )}
 
         {/* Add/Edit Form */}
         {(isAdding || editingId) && (
@@ -171,7 +214,7 @@ export default function UserManagement() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tên đăng nhập *
+                  Tên đăng nhập <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -180,24 +223,40 @@ export default function UserManagement() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   required
                 />
+                {errors.username && (
+                  <p className="text-red-500 text-sm mt-1">{errors.username}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {isAdding ? 'Mật khẩu *' : 'Mật khẩu mới (để trống nếu không đổi)'}
+                  {isAdding ? (
+                    <>
+                      Mật khẩu <span className="text-red-500">*</span>
+                    </>
+                  ) : (
+                    'Mật khẩu mới (để trống nếu không đổi)'
+                  )}
                 </label>
+
                 <input
                   type="password"
                   value={formData.newPassword}
-                  onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, newPassword: e.target.value })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   required={isAdding}
                 />
+                {errors.newPassword && (
+                  <p className="text-red-500 text-sm mt-1">{errors.newPassword}</p>
+                )}
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Họ và tên *
+                  Họ và tên <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -209,6 +268,9 @@ export default function UserManagement() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   required
                 />
+                {errors.name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                )}
               </div>
 
               <div>
@@ -228,7 +290,7 @@ export default function UserManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vai trò *
+                  Vai trò <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.role}
@@ -241,6 +303,9 @@ export default function UserManagement() {
                   <option value="admin">Quản trị viên</option>
                 </select>
               </div>
+              {errors.role && (
+                <p className="text-red-500 text-sm mt-1">{errors.role}</p>
+              )}
             </div>
 
             <div className="flex gap-2 mt-4">

@@ -39,6 +39,8 @@ export default function SecuritySettingsComponent() {
   });
   const [showMasterKey, setShowMasterKey] = useState(false);
   const [success, setSuccess] = useState('');
+  const [passwordPolicyError, setPasswordPolicyError] = useState('');
+
 
   useEffect(() => {
     loadSettings();
@@ -53,7 +55,10 @@ export default function SecuritySettingsComponent() {
       const initialKey = generateMasterKey();
       const initialSettings = { ...settings, masterKey: initialKey };
       setSettings(initialSettings);
+      setShowMasterKey(true);
       localStorage.setItem('securitySettings', JSON.stringify(initialSettings));
+      setSuccess('Master Key đã được khởi tạo lần đầu!');
+      setTimeout(() => setSuccess(''), 3000);
       addAuditLog('Khởi tạo Master Key', 'Hệ thống', 'Tạo Master Key lần đầu');
     }
   };
@@ -86,27 +91,42 @@ export default function SecuritySettingsComponent() {
   };
 
   const handleSaveSettings = () => {
-    localStorage.setItem('securitySettings', JSON.stringify(settings));
-    addAuditLog('Cập nhật cài đặt bảo mật', 'Admin', 'Đã thay đổi cài đặt bảo mật hệ thống');
-    setSuccess('Đã lưu cài đặt bảo mật!');
-    setTimeout(() => setSuccess(''), 3000);
-  };
+  const { requireUppercase, requireNumbers, requireSpecialChars } =
+    settings.passwordPolicy;
 
-  const addAuditLog = (action: string, user: string, details: string) => {
-    const newEntry: AuditEntry = {
-      id: `audit_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      action,
-      user,
-      details
-    };
-    const updatedSettings = {
-      ...settings,
-      auditLog: [newEntry, ...settings.auditLog].slice(0, 50) // Keep last 50 entries
-    };
-    setSettings(updatedSettings);
-    localStorage.setItem('securitySettings', JSON.stringify(updatedSettings));
-  };
+
+  if (!requireUppercase && !requireNumbers && !requireSpecialChars) {
+    setPasswordPolicyError('Vui lòng chọn ít nhất 1 chính sách mật khẩu');
+    return;
+  }
+
+  setPasswordPolicyError('');
+  localStorage.setItem('securitySettings', JSON.stringify(settings));
+  addAuditLog(
+    'Cập nhật cài đặt bảo mật',
+    'Admin',
+    'Đã thay đổi cài đặt bảo mật hệ thống'
+  );
+
+  setSuccess('Đã lưu cài đặt bảo mật!');
+  setTimeout(() => setSuccess(''), 3000);
+};
+
+const addAuditLog = (action: string, user: string, details: string) => { 
+  const newEntry: AuditEntry = { 
+    id: `audit_${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    action,
+    user, 
+    details 
+  }; 
+  const updatedSettings = {
+    ...settings, auditLog: [newEntry, ...settings.auditLog].slice(0, 50) // Keep last 50 entries
+  }; 
+  setSettings(updatedSettings);
+  localStorage.setItem('securitySettings',
+  JSON.stringify(updatedSettings)); 
+};
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -282,6 +302,9 @@ export default function SecuritySettingsComponent() {
                 />
                 <span className="text-sm text-gray-700">Yêu cầu ký tự đặc biệt</span>
               </label>
+              {passwordPolicyError && (
+                <p className="text-red-500 text-sm mt-2">{passwordPolicyError}</p>
+              )}
             </div>
           </div>
         </div>
