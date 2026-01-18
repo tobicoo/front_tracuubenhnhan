@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Shield, Activity, TrendingUp, UserPlus, Lock, Key, AlertCircle, BarChart3 } from 'lucide-react';
 
-interface User {
+export interface User {
   id: string;
   username: string;
-  role: string;
-  profile: {
-    name: string;
+  password: string;
+  role: 'patient' | 'doctor' | 'admin';
+  profile?: {
+    name?: string;
+    email?: string;
   };
 }
+
 
 interface AuditEntry {
   id: string;
@@ -309,14 +312,14 @@ export default function AdminDashboardHome({ adminName }: AdminDashboardHomeProp
             icon={<UserPlus className="w-6 h-6 text-blue-600" />}
             title="Thêm người dùng mới"
             description="Tạo tài khoản cho bệnh nhân, bác sĩ hoặc admin"
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/admin/users')}
           />
           
           <QuickActionCard
             icon={<Users className="w-6 h-6 text-green-600" />}
             title="Quản lý người dùng"
             description="Xem và chỉnh sửa thông tin người dùng"
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/admin/users')}
           />
           
           <QuickActionCard
@@ -363,7 +366,7 @@ export default function AdminDashboardHome({ adminName }: AdminDashboardHomeProp
 }
 
 function StatCard({ icon, title, value, bgColor, iconBg, trend }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   value: string;
   bgColor: string;
@@ -385,7 +388,7 @@ function StatCard({ icon, title, value, bgColor, iconBg, trend }: {
 }
 
 function SecurityStatusItem({ icon, title, status, description }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   status: boolean;
   description: string;
@@ -409,7 +412,7 @@ function SecurityStatusItem({ icon, title, status, description }: {
 }
 
 function QuickActionCard({ icon, title, description, onClick }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
   onClick: () => void;
