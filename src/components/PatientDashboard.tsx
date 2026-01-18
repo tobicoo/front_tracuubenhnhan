@@ -40,7 +40,7 @@ export default function PatientDashboard({ user, onLogout }: PatientDashboardPro
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="font-medium">{user.profile.name}</p>
-              <p className="text-sm text-gray-600">Người bệnh - {user.profile.patientId}</p>
+              <p className="text-sm text-gray-600">Người bệnh - {user.patientId || (user.profile as any)?.patientId}</p>
             </div>
             <button
               onClick={handleLogout}

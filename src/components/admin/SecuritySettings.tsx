@@ -43,6 +43,7 @@ export default function SecuritySettingsComponent() {
 
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     loadSettings();
   }, []);
 
@@ -87,7 +88,7 @@ export default function SecuritySettingsComponent() {
   const handleCopyMasterKey = () => {
     navigator.clipboard.writeText(settings.masterKey);
     setSuccess('Đã sao chép Master Key!');
-    setTimeout(() => setSuccess(''), 2000);
+    setTimeout(() => setSuccess(''), 3000);
   };
 
   const handleSaveSettings = () => {

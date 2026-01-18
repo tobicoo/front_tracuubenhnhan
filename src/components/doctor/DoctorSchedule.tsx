@@ -43,6 +43,7 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     loadAppointments();
     loadPatients();
   }, []);

@@ -46,6 +46,7 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
 
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     loadRecords();
     loadPatients();
   }, []);
@@ -206,7 +207,7 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
     const keyword = searchTerm.toLowerCase();
 
     return (
-      record.recordCode?.toLowerCase().includes(keyword) || // ✅ tìm theo mã
+      record.recordCode?.toLowerCase().includes(keyword) || 
       record.patientName?.toLowerCase().includes(keyword) ||
       record.diagnosis.toLowerCase().includes(keyword) ||
       record.symptoms.toLowerCase().includes(keyword)

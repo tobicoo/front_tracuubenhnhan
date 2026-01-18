@@ -12,8 +12,20 @@ export interface User {
   username: string;
   password: string;
   role: 'patient' | 'doctor' | 'admin';
-  profile: any;
+
+  /** CHỈ CÓ VỚI BỆNH NHÂN */
+  patientId?: string;
+
+  profile: {
+    name: string;
+    email?: string;
+    phone?: string;
+    cccd?: string;
+    address?: string;
+    emergencyContact?: string;
+  };
 }
+
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);

@@ -7,16 +7,27 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<User & { newPassword?: string }>>({
-    username: '',
-    newPassword: '',
-    role: 'patient',
-    profile: { name: '', email: '' }
-  });
+  const [formData, setFormData] = useState<
+  Partial<User & { newPassword?: string }>
+>({
+  username: '',
+  newPassword: '',
+  role: 'patient',
+  profile: {
+    name: '',
+    email: '',
+    phone: '',
+    cccd: '',
+    address: '',
+    emergencyContact: ''
+  }
+});
+
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     loadUsers();
   }, []);
 
@@ -61,22 +72,36 @@ export default function UserManagement() {
   };
 
   const handleAdd = () => {
-    if (!validateForm()) return;
-    const newUser: User = {
-      id: `user_${Date.now()}`,
-      username: formData.username,
-      password: formData.newPassword,
-      role: formData.role as 'patient' | 'doctor' | 'admin',
-      profile: formData.profile
-    };
+  if (!validateForm()) return;
 
-    const updatedUsers = [...users, newUser];
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-    setUsers(updatedUsers);
-    resetForm();
+  const newUser: User = {
+    id: `user_${Date.now()}`,
+    username: formData.username!,
+    password: formData.newPassword!,
+    role: formData.role as 'patient' | 'doctor' | 'admin',
 
-    setSuccessMessage('Đã thêm người dùng mới thành công!'); 
+    patientId:
+      formData.role === 'patient'
+        ? `BN${Date.now().toString().slice(-10)}`
+        : undefined,
+
+    profile: {
+      name: formData.profile?.name || '',
+      email: formData.profile?.email || '',
+      phone: formData.profile?.phone || '',
+      cccd: formData.profile?.cccd || '',
+      address: formData.profile?.address || '',
+      emergencyContact: formData.profile?.emergencyContact || '',
+    }
   };
+
+  const updatedUsers = [...users, newUser];
+  localStorage.setItem('users', JSON.stringify(updatedUsers));
+  setUsers(updatedUsers);
+  resetForm();
+  setSuccessMessage('Đã thêm người dùng mới thành công!');
+};
+
 
   const handleEdit = (id: string) => {
     const user = users.find(u => u.id === id);
@@ -95,6 +120,7 @@ export default function UserManagement() {
           username: formData.username || user.username,
           password: formData.newPassword || user.password,
           role: formData.role || user.role,
+          patientId: user.patientId,
           profile: formData.profile || user.profile
         };
       }
@@ -115,6 +141,7 @@ export default function UserManagement() {
       }
     }
     
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
     setUsers(updatedUsers);
     resetForm();
 
@@ -287,6 +314,78 @@ export default function UserManagement() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Số điện thoại
+                </label>
+                <input
+                  type="text"
+                  value={formData.profile?.phone}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      profile: { ...formData.profile, phone: e.target.value } as any
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  CCCD
+                </label>
+                <input
+                  type="text"
+                  value={formData.profile?.cccd}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      profile: { ...formData.profile, cccd: e.target.value } as any
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Địa chỉ
+                </label>
+                <input
+                  type="text"
+                  value={formData.profile?.address}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      profile: { ...formData.profile, address: e.target.value } as any
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Liên lạc khẩn cấp
+                </label>
+                <input
+                  type="text"
+                  value={formData.profile?.emergencyContact}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      profile: {
+                        ...formData.profile,
+                        emergencyContact: e.target.value
+                      } as any
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+   
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -49,6 +49,7 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
 
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     loadPlans();
     loadPatients();
   }, []);

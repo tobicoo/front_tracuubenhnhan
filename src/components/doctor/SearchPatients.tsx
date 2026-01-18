@@ -5,11 +5,11 @@ interface Patient {
   id: string;
   username: string;
   role: string;
+  patientId: string;
   profile: {
     name: string;
     email: string;
     phone: string;
-    patientId: string;
     cccd: string;
     dateOfBirth: string;
     gender: string;
@@ -40,6 +40,7 @@ export default function SearchPatients({ doctorId }: SearchPatientsProps) {
   const [patientHistory, setPatientHistory] = useState<MedicalCondition[]>([]);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     loadPatients();
   }, []);
 
@@ -67,7 +68,7 @@ export default function SearchPatients({ doctorId }: SearchPatientsProps) {
     const historyData = localStorage.getItem('medicalHistory');
     if (historyData) {
       const allHistory: MedicalCondition[] = JSON.parse(historyData);
-      setPatientHistory(allHistory.filter(h => h.patientId === patient.id));
+      setPatientHistory(allHistory.filter(h => h.patientId === patient.patientId));
     }
   };
 
@@ -122,7 +123,7 @@ export default function SearchPatients({ doctorId }: SearchPatientsProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <Hash className="w-4 h-4" />
-                        {patient.profile.patientId}
+                        {patient.patientId || (patient.profile as any)?.patientId}
                       </div>
                       <div className="flex items-center gap-2">
                         <IdCard className="w-4 h-4" />
