@@ -234,7 +234,7 @@ export default function DoctorDashboardHome({ doctorId, doctorName }: DoctorDash
               icon={<Users className="w-6 h-6 text-blue-600" />}
               title="Tìm kiếm bệnh nhân"
               description="Tra cứu thông tin bệnh nhân"
-              onClick={() => navigate('/doctor')}
+              onClick={() => navigate('/doctor/search')}
             />
             
             <QuickActionCard

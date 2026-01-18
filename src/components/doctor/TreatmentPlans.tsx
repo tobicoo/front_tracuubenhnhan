@@ -44,11 +44,24 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
     status: 'active',
     notes: ''
   });
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [successMessage, setSuccessMessage] = useState('');
+
 
   useEffect(() => {
     loadPlans();
     loadPatients();
   }, []);
+
+  useEffect(() => {
+  if (successMessage) {
+    const timer = setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+
+    return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   const loadPatients = () => {
     const usersData = localStorage.getItem('users');
@@ -82,7 +95,40 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
     }
   };
 
+const validateForm = () => {
+  const newErrors: { [key: string]: string } = {};
+
+  if (!formData.patientId) {
+    newErrors.patientId = 'Vui lòng chọn bệnh nhân';
+  }
+
+  if (!formData.diagnosis?.trim()) {
+    newErrors.diagnosis = 'Chẩn đoán không được để trống';
+  }
+
+  if (!formData.instructions?.trim()) {
+    newErrors.instructions = 'Hướng dẫn không được để trống';
+  } 
+
+  if (!formData.procedures?.trim()) {
+    newErrors.procedures = 'Quy trình điều trị không được để trống';
+  }
+
+  if (!formData.endDate) {
+  newErrors.endDate = 'Vui lòng chọn ngày kết thúc';
+  }
+
+  if (formData.endDate && formData.startDate && formData.endDate < formData.startDate) {
+    newErrors.endDate = 'Ngày kết thúc phải sau ngày bắt đầu';
+  }
+
+  setErrors(newErrors);
+
+  return Object.keys(newErrors).length === 0;
+  };
+
   const handleAdd = () => {
+    if (!validateForm()) return;
     const newPlan: TreatmentPlan = {
       id: `plan_${Date.now()}`,
       patientId: formData.patientId || '',
@@ -104,6 +150,8 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
 
     loadPlans();
     resetForm();
+
+    setSuccessMessage('Phác đồ điều trị đã được thêm thành công.');
   };
 
   const handleEdit = (id: string) => {
@@ -115,6 +163,7 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
   };
 
   const handleUpdate = () => {
+    if (!validateForm()) return;
     const plansData = localStorage.getItem('treatmentPlans');
     if (plansData) {
       const allPlans: TreatmentPlan[] = JSON.parse(plansData);
@@ -126,6 +175,7 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
       }
     }
     resetForm();
+    setSuccessMessage('Phác đồ điều trị đã được cập nhật thành công.');
   };
 
   const handleDelete = (id: string) => {
@@ -137,6 +187,7 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
         localStorage.setItem('treatmentPlans', JSON.stringify(filtered));
         loadPlans();
       }
+    setSuccessMessage('Phác đồ điều trị đã được xóa thành công.');
     }
   };
 
@@ -152,6 +203,7 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
       status: 'active',
       notes: ''
     });
+    setErrors({});
     setIsAdding(false);
     setEditingId(null);
   };
@@ -170,6 +222,13 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
           </button>
         </div>
 
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-100 border border-green-200 text-green-800 rounded-lg">
+            {successMessage}
+          </div>
+        )}  
+
         {/* Add/Edit Form */}
         {(isAdding || editingId) && (
           <div className="mb-6 p-4 border border-green-200 rounded-lg bg-green-50">
@@ -179,11 +238,14 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bệnh nhân *
+                  Bệnh nhân <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.patientId}
-                  onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
+                  onChange={(e) => {
+                    setErrors({ ...errors, patientId: '' });
+                    setFormData({ ...formData, patientId: e.target.value });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   required
                   disabled={!!editingId}
@@ -195,24 +257,33 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
                     </option>
                   ))}
                 </select>
+                {errors.patientId && (
+                  <p className="text-red-500 text-sm mt-1">{errors.patientId}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chẩn đoán *
+                  Chẩn đoán <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.diagnosis}
-                  onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
+                  onChange={(e) => {
+                    setErrors({ ...errors, diagnosis: '' });
+                    setFormData({ ...formData, diagnosis: e.target.value });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   required
                 />
+                {errors.diagnosis && (
+                  <p className="text-red-500 text-sm mt-1">{errors.diagnosis}</p>
+                )}  
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ngày bắt đầu *
+                  Ngày bắt đầu 
                 </label>
                 <input
                   type="date"
@@ -225,19 +296,26 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ngày kết thúc dự kiến
+                  Ngày kết thúc dự kiến <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  onChange={(e) => {
+                    setErrors({ ...errors, endDate: '' });
+                    setFormData({ ...formData, endDate: e.target.value });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 />
+                {errors.endDate && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.endDate}
+                  </p>
+                )}
               </div>
-
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Thuốc điều trị *
+                  Thuốc điều trị 
                 </label>
                 <textarea
                   value={formData.medications}
@@ -251,29 +329,41 @@ export default function TreatmentPlans({ doctorId }: TreatmentPlansProps) {
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quy trình điều trị
+                  Quy trình điều trị <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={formData.procedures}
-                  onChange={(e) => setFormData({ ...formData, procedures: e.target.value })}
+                  onChange={(e) => {
+                    setErrors({ ...errors, procedures: '' });
+                    setFormData({ ...formData, procedures: e.target.value });
+                  }}
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   placeholder="Các thủ thuật, xét nghiệm cần thực hiện..."
                 />
+                {errors.procedures && (
+                  <p className="text-red-500 text-sm mt-1">{errors.procedures}</p>
+                )}
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hướng dẫn cho bệnh nhân *
+                  Hướng dẫn cho bệnh nhân <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={formData.instructions}
-                  onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                  onChange={(e) => {
+                    setErrors({ ...errors, instructions: '' });
+                    setFormData({ ...formData, instructions: e.target.value });
+                  }}
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   placeholder="Chế độ ăn uống, sinh hoạt, lưu ý..."
                   required
                 />
+                {errors.instructions && (
+                  <p className="text-red-500 text-sm mt-1">{errors.instructions}</p>
+                )}
               </div>
 
               <div>

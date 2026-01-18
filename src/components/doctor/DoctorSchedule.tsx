@@ -39,10 +39,23 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
     notes: ''
   });
 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   useEffect(() => {
     loadAppointments();
     loadPatients();
   }, []);
+
+  useEffect(() => {
+  if (successMessage) {
+    const timer = setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+
+    return () => clearTimeout(timer);
+    }
+  }, [successMessage]); 
 
   const loadPatients = () => {
     const usersData = localStorage.getItem('users');
@@ -76,7 +89,31 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
     }
   };
 
+const validateForm = () => {
+  const newErrors: { [key: string]: string } = {};
+
+  if (!formData.patientId) {
+    newErrors.patientId = 'Vui lòng chọn bệnh nhân';
+  }
+
+  if (!formData.date) {
+    newErrors.date = 'Vui lòng chọn ngày khám';
+  }
+
+  if (!formData.time) {
+    newErrors.time = 'Vui lòng chọn giờ khám';
+  }
+
+  if (!formData.type) {
+    newErrors.type = 'Vui lòng chọn loại khám';
+  }
+  setErrors(newErrors);
+
+  return Object.keys(newErrors).length === 0;
+  };
+
   const handleAdd = () => {
+    if (!validateForm()) return;
     const newAppointment: Appointment = {
       id: `apt_${Date.now()}`,
       doctorId,
@@ -95,6 +132,8 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
 
     loadAppointments();
     resetForm();
+
+    setSuccessMessage('Lịch khám đã được thêm thành công.');
   };
 
   const handleEdit = (id: string) => {
@@ -106,6 +145,7 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
   };
 
   const handleUpdate = () => {
+    if (!validateForm()) return;
     const appointmentsData = localStorage.getItem('appointments');
     if (appointmentsData) {
       const allAppointments: Appointment[] = JSON.parse(appointmentsData);
@@ -117,6 +157,7 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
       }
     }
     resetForm();
+    setSuccessMessage('Lịch khám đã được cập nhật thành công.');
   };
 
   const handleDelete = (id: string) => {
@@ -128,6 +169,7 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
         localStorage.setItem('appointments', JSON.stringify(filtered));
         loadAppointments();
       }
+    setSuccessMessage('Lịch khám đã được xóa thành công.');
     }
   };
 
@@ -140,6 +182,7 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
       status: 'scheduled',
       notes: ''
     });
+    setErrors({});
     setIsAdding(false);
     setEditingId(null);
   };
@@ -175,6 +218,13 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
           />
         </div>
 
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-100 border border-green-200 text-green-800 rounded-lg">
+            {successMessage}
+          </div>
+        )}
+
         {/* Add/Edit Form */}
         {(isAdding || editingId) && (
           <div className="mb-6 p-4 border border-green-200 rounded-lg bg-green-50">
@@ -184,11 +234,14 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bệnh nhân *
+                  Bệnh nhân <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.patientId}
-                  onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
+                  onChange={(e) => {
+                    setErrors({ ...errors, patientId: '' });
+                    setFormData({ ...formData, patientId: e.target.value });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   required
                 >
@@ -199,15 +252,23 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
                     </option>
                   ))}
                 </select>
+                {errors.patientId && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.patientId}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Loại khám *
+                  Loại khám <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  onChange={(e) => {
+                    setErrors({ ...errors, type: '' });
+                    setFormData({ ...formData, type: e.target.value });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   required
                 >
@@ -216,32 +277,53 @@ export default function DoctorSchedule({ doctorId }: DoctorScheduleProps) {
                   <option value="Tư vấn">Tư vấn</option>
                   <option value="Xét nghiệm">Xét nghiệm</option>
                 </select>
+                {errors.type && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.type}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ngày khám *
+                  Ngày khám <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(e) => {
+                    setErrors({ ...errors, date: '' });
+                    setFormData({ ...formData, date: e.target.value });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   required
                 />
+                {errors.date && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.date}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Giờ khám *
+                  Giờ khám <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="time"
                   value={formData.time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                  onChange={(e) => {
+                    setErrors({ ...errors, time: '' });
+                    setFormData({ ...formData, time: e.target.value });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   required
                 />
+                {errors.time && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.time}
+                  </p>
+                )}
               </div>
 
               <div>

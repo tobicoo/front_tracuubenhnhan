@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Edit, Trash2, Save, X, Search } from 'lucide-react';
+import { FileText, Plus, Edit, Trash2, Save, X, Search, Hash, Calendar } from 'lucide-react';
 
 interface MedicalRecord {
   id: string;
+  recordCode: string;
   patientId: string;
   patientName?: string;
   date: string;
@@ -40,11 +41,24 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
     notes: '',
     prescription: ''
   });
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [successMessage, setSuccessMessage] = useState('');
+
 
   useEffect(() => {
     loadRecords();
     loadPatients();
   }, []);
+
+  useEffect(() => {
+  if (successMessage) {
+    const timer = setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+
+    return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   const loadPatients = () => {
     const usersData = localStorage.getItem('users');
@@ -65,6 +79,7 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
         const users = JSON.parse(usersData);
         const recordsWithNames = allRecords.map(record => ({
           ...record,
+          recordCode: record.recordCode || `HS-${record.id}`,
           patientName: users.find((u: any) => u.id === record.patientId)?.profile.name || 'Unknown'
         }));
         setRecords(recordsWithNames);
@@ -74,7 +89,32 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
     }
   };
 
+  const validateForm = () => {
+  const newErrors: { [key: string]: string } = {};
+
+  if (!formData.patientId) {
+    newErrors.patientId = 'Vui lòng chọn bệnh nhân';
+  }
+
+  if (!formData.symptoms?.trim()) {
+    newErrors.symptoms = 'Triệu chứng không được để trống';
+  }
+
+  if (!formData.diagnosis?.trim()) {
+    newErrors.diagnosis = 'Chẩn đoán không được để trống';
+  }
+
+  if (!formData.treatment?.trim()) {
+    newErrors.treatment = 'Điều trị không được để trống';
+  }
+  setErrors(newErrors);
+
+  return Object.keys(newErrors).length === 0;
+  };
+
+
   const handleAdd = () => {
+    if (!validateForm()) return;
     const usersData = localStorage.getItem('users');
     let doctorName = 'Bác sĩ';
     if (usersData) {
@@ -87,6 +127,7 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
 
     const newRecord: MedicalRecord = {
       id: `rec_${Date.now()}`,
+      recordCode: `HSB-${Date.now()}`,
       patientId: formData.patientId || '',
       date: formData.date || '',
       doctorName,
@@ -104,6 +145,8 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
 
     loadRecords();
     resetForm();
+
+    setSuccessMessage('Thêm hồ sơ bệnh án thành công!');
   };
 
   const handleEdit = (id: string) => {
@@ -115,6 +158,7 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
   };
 
   const handleUpdate = () => {
+    if (!validateForm()) return;
     const recordsData = localStorage.getItem('medicalRecords');
     if (recordsData) {
       const allRecords: MedicalRecord[] = JSON.parse(recordsData);
@@ -126,6 +170,8 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
       }
     }
     resetForm();
+
+    setSuccessMessage('Cập nhật hồ sơ bệnh án thành công!');
   };
 
   const handleDelete = (id: string) => {
@@ -137,6 +183,7 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
         localStorage.setItem('medicalRecords', JSON.stringify(filtered));
         loadRecords();
       }
+      setSuccessMessage('Xóa hồ sơ bệnh án thành công!');
     }
   };
 
@@ -150,15 +197,21 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
       notes: '',
       prescription: ''
     });
+    setErrors({});
     setIsAdding(false);
     setEditingId(null);
   };
 
-  const filteredRecords = records.filter(record =>
-    (record.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-    record.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.symptoms.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRecords = records.filter(record => {
+    const keyword = searchTerm.toLowerCase();
+
+    return (
+      record.recordCode?.toLowerCase().includes(keyword) || // ✅ tìm theo mã
+      record.patientName?.toLowerCase().includes(keyword) ||
+      record.diagnosis.toLowerCase().includes(keyword) ||
+      record.symptoms.toLowerCase().includes(keyword)
+    );
+  });
 
   return (
     <div className="max-w-6xl">
@@ -174,13 +227,19 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
           </button>
         </div>
 
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+            {successMessage}
+          </div>
+        )}
+
         {/* Search */}
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên bệnh nhân, chẩn đoán..."
+              placeholder="Tìm kiếm theo tên bệnh nhân, mã hồ sơ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -197,12 +256,17 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bệnh nhân *
+                  Bệnh nhân <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.patientId}
-                  onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  onChange={(e) => {
+                    setFormData({ ...formData, patientId: e.target.value })
+                    setErrors({ ...errors, patientId: '' });
+                    }
+                  }
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 
+                    ${errors.patientId ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'}`}
                   required
                   disabled={!!editingId}
                 >
@@ -213,11 +277,14 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
                     </option>
                   ))}
                 </select>
+                {errors.patientId && (
+                  <p className="text-red-500 text-sm mt-1">{errors.patientId}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ngày khám *
+                  Ngày khám <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -230,41 +297,65 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Triệu chứng *
+                  Triệu chứng <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={formData.symptoms}
-                  onChange={(e) => setFormData({ ...formData, symptoms: e.target.value })}
+                  onChange={(e) => { 
+                    setFormData({ ...formData, symptoms: e.target.value });
+                    setErrors({ ...errors, symptoms: '' });
+                    }
+                  }
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2
+                    ${errors.symptoms ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'}`}
                   required
                 />
+                {errors.symptoms && (
+                  <p className="text-red-500 text-sm mt-1">{errors.symptoms}</p>
+                )}
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chẩn đoán *
+                  Chẩn đoán <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.diagnosis}
-                  onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  onChange={(e) => {
+                    setFormData({ ...formData, diagnosis: e.target.value })
+                    setErrors({ ...errors, diagnosis: '' });
+                    }
+                  }
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 
+                    ${errors.diagnosis ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'}`}
                   required
                 />
+                {errors.diagnosis && (
+                  <p className="text-red-500 text-sm mt-1">{errors.diagnosis}</p>
+                )}
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Điều trị *
+                  Điều trị <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={formData.treatment}
-                  onChange={(e) => setFormData({ ...formData, treatment: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, treatment: e.target.value })
+                    setErrors({ ...errors, treatment: '' });
+                    }
+                  }
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2
+                   ${errors.treatment ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'}`}
                   required
                 />
+                {errors.treatment && (
+                  <p className="text-red-500 text-sm mt-1">{errors.treatment}</p>
+                )}
               </div>
 
               <div className="md:col-span-2">
@@ -327,11 +418,16 @@ export default function ManageRecords({ doctorId }: ManageRecordsProps) {
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-8 mb-2 flex-nowrap">
                       <h3 className="font-semibold text-lg text-gray-900">
                         {record.patientName}
                       </h3>
-                      <span className="text-sm text-gray-600">
+                      <span className="flex items-center gap-2 text-sm text-gray-600">
+                        <Hash className="w-4 h-4" />
+                        {record.recordCode?.replace('rec_', '')}
+                      </span>
+                      <span className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="w-4 h-4" />
                         {new Date(record.date).toLocaleDateString('vi-VN')}
                       </span>
                     </div>
